@@ -29,7 +29,7 @@ jobs:
             echo "Logging into ECR..."
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
-            cd /home/ntkyc/workspace/dsm-mono-test/dsm-mono
+            cd /home/ntkyc/workspace/dsm-mono-test/rollback-test
             git checkout master && git pull origin master
 
             echo "Pulling desired rollback image..."
