@@ -1,0 +1,42 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_version:
+        description: 'Backend image tag to rollback'
+        required: true
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPO_BACKEND: rollback-test
+  ECR_REGISTRY: 687444329037.dkr.ecr.ap-south-1.amazonaws.com
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rollback backend service
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST_TEST }}
+          username: ${{ secrets.SERVER_USER_TEST }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ECR_REPO_BACKEND,ECR_REGISTRY,AWS_REGION
+          script: |
+            IMAGE_TAG="${{ github.event.inputs.backend_version }}"
+
+            echo "Logging into ECR..."
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+            cd /home/ntkyc/workspace/dsm-mono-test/dsm-mono
+            # git checkout master && git pull origin master
+
+            echo "Pulling desired rollback image..."
+            docker pull $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG
+
+            echo "Updating compose file..."
+            sed -i "s|$ECR_REPO_BACKEND:.*|$ECR_REPO_BACKEND:$IMAGE_TAG|g" docker-compose-dev.yml
+
+            echo "Restarting service using target tag..."
+            docker compose -f docker-compose-dev.yml up -d --force-recreate

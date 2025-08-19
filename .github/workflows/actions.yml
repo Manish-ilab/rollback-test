@@ -1,0 +1,85 @@
+name: Deploy and Build
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Optional image version tag'
+        required: false
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPO_BACKEND: rollback-test
+  ECR_REGISTRY: 687444329037.dkr.ecr.ap-south-1.amazonaws.com
+
+jobs:
+  remote-build:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.taggen.outputs.image_tag }}
+    steps:
+      - name: Set image tag
+        id: taggen
+        run: |
+          IMAGE_TAG="${{ github.event.inputs.version }}"
+          if [ -z "$IMAGE_TAG" ]; then
+            IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)
+          fi
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Build and push on Server 1
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST_TEST }}
+          username: ${{ secrets.SERVER_USER_TEST }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ECR_REPO_BACKEND,ECR_REPO_FRONTEND,ECR_REGISTRY,AWS_REGION
+          timeout: 1000s
+          script: |
+            set -e
+            IMAGE_TAG="${{ steps.taggen.outputs.image_tag }}"
+            cd /home/ntkyc/workspace/dsm-mono-test/rollback-test
+
+            echo "Checking out latest version..."
+            git checkout master
+            git pull origin master
+
+            echo "Logging into ECR..."
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+            echo "Building backend image..."
+            docker build -t $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG .
+
+            echo "Pushing backend image to ECR..."
+            docker push $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG
+
+  deploy:
+    needs: remote-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy on Server 2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST_TEST }}
+          username: ${{ secrets.SERVER_USER_TEST }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ECR_REPO_BACKEND,ECR_REGISTRY,AWS_REGION
+          script: |
+            set -e
+            IMAGE_TAG=${{ needs.remote-build.outputs.image_tag }}
+
+            echo "Login to ECR..."
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+            cd /home/ntkyc/workspace/dsm-mono-test/rollback-test
+            git checkout master
+            git pull origin master
+
+            echo "Pulling image..."
+            docker pull $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG
+
+            echo "Starting services..."
+            docker compose -f docker-compose-dev.yml up -d --force-recreate
