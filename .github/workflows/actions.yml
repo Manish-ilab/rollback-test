@@ -55,6 +55,7 @@ jobs:
 
             echo "Pushing backend image to ECR..."
             docker push $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG
+            docker push $ECR_REGISTRY/$ECR_REPO_BACKEND:latest
 
   deploy:
     needs: remote-build
