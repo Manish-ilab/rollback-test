@@ -36,7 +36,7 @@ jobs:
             docker pull $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG
 
             echo "Updating compose file..."
-            sed -i "s|$ECR_REPO_BACKEND:.*|$ECR_REPO_BACKEND:$IMAGE_TAG|g" docker-compose-dev.yml
+            sed -i "s|$ECR_REGISTRY/$ECR_REPO_BACKEND:.*|$ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG|g" docker-compose-dev.yml
 
             echo "Restarting service using target tag..."
             docker compose -f docker-compose-dev.yml up -d --force-recreate
