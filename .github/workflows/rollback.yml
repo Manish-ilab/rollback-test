@@ -40,9 +40,9 @@ jobs:
 
             sed "s|$ECR_REGISTRY/$ECR_REPO_BACKEND:.*|$ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG|g" docker-compose-dev.yml \
               > $TMP_FILE
-
-            echo "Starting services using temporary file..."
-            docker compose -f $TMP_FILE up -d --force-recreate
+            
+            PROJECT_NAME="rollback-test"
+            docker compose -p $PROJECT_NAME -f $TMP_FILE up -d --force-recreate
 
             echo "Cleaning up..."
             rm $TMP_FILE
