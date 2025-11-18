@@ -35,17 +35,21 @@ jobs:
             echo "Pulling desired rollback image..."
             docker pull $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG
 
-            echo "Creating temporary compose file..."
-            TMP_FILE=$(mktemp)
+            # echo "Creating temporary compose file..."
+            # TMP_FILE=$(mktemp)
 
-            sed "s|$ECR_REGISTRY/$ECR_REPO_BACKEND:.*|$ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG|g" docker-compose-dev.yml \
-              > $TMP_FILE
+            # sed "s|$ECR_REGISTRY/$ECR_REPO_BACKEND:.*|$ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG|g" docker-compose-dev.yml \
+            #   > $TMP_FILE
             
-            PROJECT_NAME="rollback-test"
-            docker compose -p $PROJECT_NAME -f $TMP_FILE up -d --force-recreate
+            # PROJECT_NAME="rollback-test"
+            # docker compose -p $PROJECT_NAME -f $TMP_FILE up -d --force-recreate
 
-            echo "Cleaning up..."
-            rm $TMP_FILE
+            # echo "Cleaning up..."
+            # rm $TMP_FILE
+
+            echo "Updating compose file and running it..." 
+            sed "s|$ECR_REGISTRY/$ECR_REPO_BACKEND:.*|$ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG|g" docker-compose-dev.yml \
+            | docker compose -f - up -d --force-recreate
 
             echo "Rollback completed to tag: $IMAGE_TAG"
 
