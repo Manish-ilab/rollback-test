@@ -88,3 +88,38 @@ jobs:
 
             echo "Starting services..."
             docker compose -f docker-compose-dev.yml up -d --force-recreate
+
+  notify:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+
+      - name: Prepare notification message
+        id: msg
+        run: |
+          if [ "${{ needs.deploy.result }}" = "success" ]; then
+            echo "message=🚀 *Deployment Successful!*" >> $GITHUB_OUTPUT
+            echo "color=#2ECC71" >> $GITHUB_OUTPUT
+          else
+            echo "message=❌ *Deployment Failed!*" >> $GITHUB_OUTPUT
+            echo "color=#E74C3C" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send notification to Mattermost
+        run: |
+          curl -X POST -H 'Content-Type: application/json' \
+          -d "{
+                \"username\": \"GitHub Actions\",
+                \"icon_url\": \"https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png\",
+                \"attachments\": [{
+                    \"fallback\": \"Deployment Notification\",
+                    \"color\": \"${{ steps.msg.outputs.color }}\",
+                    \"text\": \"${{ steps.msg.outputs.message }}\nRepo: **${{ github.repository }}**\nBranch: **${{ github.ref_name }}**\nTriggered by: **${{ github.actor }}**\",
+                    \"fields\": [
+                      {\"short\": true, \"title\": \"Status\", \"value\": \"${{ needs.deploy.result }}\"}
+                    ]
+                }]
+          }" \
+          ${{ secrets.MATTERMOST_WEBHOOK_URL }}
