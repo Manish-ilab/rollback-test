@@ -90,7 +90,7 @@ jobs:
             docker compose -f docker-compose-dev.yml up -d --force-recreate
 
   notify:
-    needs: [deploy]
+    needs: [remote-build, deploy]
     runs-on: ubuntu-latest
     if: always()
 
