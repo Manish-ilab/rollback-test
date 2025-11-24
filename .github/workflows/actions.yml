@@ -45,7 +45,7 @@ jobs:
 
             echo "Checking out latest version..."
             git checkout master
-            git pull origin master
+            git pull origin --rebase
 
             echo "Logging into ECR..."
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
