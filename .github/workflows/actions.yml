@@ -111,7 +111,7 @@ jobs:
         run: |
           curl -X POST -H 'Content-Type: application/json' \
           -d "{
-                \"username\": \"GitHub Actions\",
+                \"username\": \"AlertBot\",
                 \"icon_url\": \"https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png\",
                 \"attachments\": [{
                     \"fallback\": \"Deployment Notification\",
